@@ -7,9 +7,10 @@ import (
 
 var handlersMap = map[vgontakte.HandlerType]vgontakte.HandlerCreator{
 	vgontakte.EchoMessageHandler: &echoHandlerCreator{},
+	vgontakte.RateMessageHandler: &messageRaterCreator{},
 }
 
-func GetHandler(t vgontakte.HandlerType) (vgontakte.HandlerCreator, error) {
+func GetHandlerCreator(t vgontakte.HandlerType) (vgontakte.HandlerCreator, error) {
 	if val, ok := handlersMap[t]; ok {
 		return val, nil
 	}

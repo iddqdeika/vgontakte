@@ -4,4 +4,5 @@ type HandlerType string
 
 const (
 	EchoMessageHandler HandlerType = "echo_message"
+	RateMessageHandler HandlerType = "rate_message"
 )

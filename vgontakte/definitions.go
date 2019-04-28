@@ -8,6 +8,7 @@ type Bot interface {
 	Init(alina alina.Alina, storage Storage, logger Logger) error
 	Run()
 	GetPrivateMessageDispatcher() (PrivateMessageDispatcher, error)
+	GetStrorage() Storage
 }
 
 type Logger interface {
@@ -24,10 +25,12 @@ type MessageHandler interface {
 	Order() int
 	Meet(message alina.PrivateMessage) bool
 	Handle(alina.PrivateMessage, error)
+	Jsonize() (*string, error)
 }
 
 type HandlerCreator interface {
 	CreateHandler(params map[string]interface{}, alina alina.Alina, bot Bot) (MessageHandler, error)
+	ParseHandler(json *string, alina alina.Alina, bot Bot) (MessageHandler, error)
 }
 
 type PrivateMessageDispatcher interface {

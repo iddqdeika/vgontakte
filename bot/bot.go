@@ -21,6 +21,10 @@ type vbot struct {
 	messageDispatcher vgontakte.PrivateMessageDispatcher
 }
 
+func (b *vbot) GetStrorage() vgontakte.Storage {
+	return b.storage
+}
+
 func (b *vbot) GetPrivateMessageDispatcher() (vgontakte.PrivateMessageDispatcher, error) {
 	if b.messageDispatcher != nil {
 		return b.messageDispatcher, nil
@@ -62,7 +66,7 @@ func (b *vbot) Run() {
 func (b *vbot) initializeMessageHandlers() []vgontakte.MessageHandler {
 	result := make([]vgontakte.MessageHandler, 0)
 
-	echoc, err := handlers.GetHandler(vgontakte.EchoMessageHandler)
+	creater, err := handlers.GetHandlerCreator(vgontakte.RateMessageHandler)
 	if err != nil {
 		panic(err)
 	}
@@ -70,11 +74,11 @@ func (b *vbot) initializeMessageHandlers() []vgontakte.MessageHandler {
 	params := map[string]interface{}{
 		"peer_id": i,
 	}
-	echo, err := echoc.CreateHandler(params, b.alina, b)
+	handler, err := creater.CreateHandler(params, b.alina, b)
 	if err != nil {
 		panic(err)
 	}
-	result = append(result, echo)
+	result = append(result, handler)
 
 	return result
 }
