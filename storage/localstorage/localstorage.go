@@ -20,6 +20,36 @@ type boltStorage struct {
 	//buckets		map[string]struct{}
 }
 
+func (s *boltStorage) Iterate(fromPath string, rule func(k, v []byte) error) error {
+	err := s.db.View(func(tx *bolt.Tx) error {
+		var err error
+		err = s.iterate(fromPath, rule, tx)
+		return err
+	})
+	return err
+}
+
+func (s *boltStorage) iterate(fromPath string, rule func(k, v []byte) error, tx *bolt.Tx) error {
+	paths := getPath(fromPath)
+
+	if len(paths) > 0 {
+		if len(paths) == 1 {
+			return fmt.Errorf("invalid path: %v", fromPath)
+		} else {
+			bucket, err := s.ensurePathWrite(paths, tx)
+			if err != nil {
+				return err
+			}
+			//result := bucket.Get([]byte(paths[len(paths)-1]))
+
+			bucket.ForEach(rule)
+
+			return nil
+		}
+	}
+	return fmt.Errorf("void path")
+}
+
 func (s *boltStorage) Init(dbFileName string) error {
 	s.fileName = dbFileName
 	db, err := bolt.Open(s.fileName, 0600, &bolt.Options{Timeout: 1 * time.Second})
@@ -125,6 +155,9 @@ func (s *boltStorage) ensurePathWrite(paths []string, tx *bolt.Tx) (*bolt.Bucket
 			tbuck = tx.Bucket([]byte(tpath))
 		} else {
 			tbuck = tbuck.Bucket([]byte(tpath))
+		}
+		if tbuck == nil {
+			return nil, fmt.Errorf("bucket %v not exists", tpath)
 		}
 	}
 	return tbuck, nil

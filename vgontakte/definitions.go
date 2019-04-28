@@ -19,6 +19,7 @@ type Logger interface {
 type Storage interface {
 	Update(path string, value string) error
 	Get(path string) ([]byte, error)
+	Iterate(fromPath string, rule func(k, v []byte) error) error
 }
 
 type MessageHandler interface {
