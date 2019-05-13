@@ -17,9 +17,8 @@ type Logger interface {
 }
 
 type Storage interface {
-	Update(path string, value string) error
-	Get(path string) ([]byte, error)
-	Iterate(fromPath string, rule func(k, v []byte) error) error
+	IncrementMessageRate(peerId int, fromId int, fwdDate int) error
+	GetMessageTop(peerId int, fromId int) (map[string]int, error)
 }
 
 type MessageHandler interface {
