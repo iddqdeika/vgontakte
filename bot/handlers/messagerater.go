@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"alina/alina"
-	"sort"
 	"strconv"
 	"strings"
 	"vgontakte/vgontakte"
@@ -15,6 +14,7 @@ func (c *messageRaterCreator) CreateHandler(params map[string]interface{}, alina
 	handler := messageRater{
 		storage: bot.GetStrorage(),
 		alina:   alina,
+		logger:  bot.GetLogger(),
 	}
 
 	return &handler, nil
@@ -24,6 +24,7 @@ func (c *messageRaterCreator) ParseHandler(data *string, alina alina.Alina, bot 
 	handler := messageRater{
 		storage: bot.GetStrorage(),
 		alina:   alina,
+		logger:  bot.GetLogger(),
 	}
 
 	return &handler, nil
@@ -32,6 +33,7 @@ func (c *messageRaterCreator) ParseHandler(data *string, alina alina.Alina, bot 
 type messageRater struct {
 	storage vgontakte.Storage
 	alina   alina.Alina
+	logger  vgontakte.Logger
 	peerId  int
 }
 
@@ -52,36 +54,21 @@ func (r *messageRater) returnMessageTop(message alina.PrivateMessage) {
 	if (strings.Contains(text, "|@")) && strings.Contains(text, "[id") {
 		id := string([]rune(message.GetText())[:strings.Index(message.GetText(), "|@")])
 		id = string([]rune(id)[strings.Index(id, "[id")+3:])
-		ratepath := strconv.Itoa(message.GetPeerId()) + ".rates." + id
-		messages := make(map[string]int)
-		r.storage.Iterate(ratepath, func(k, v []byte) error {
-			if strings.Contains(string(k), "rate") && strings.Index(string(k), "rate") == 0 {
-				i, err := strconv.Atoi(string(v))
-				if err == nil {
-					messages[string([]rune(string(k))[4:])] = i
-				}
-			}
-			return nil
-		})
-		dates := make([]string, 0)
-		for k, _ := range messages {
-			dates = append(dates, k)
+
+		fromId, err := strconv.Atoi(id)
+		if err != nil {
+			r.logger.Error("cannot convert fromid to int: " + id)
 		}
 
-		sort.Slice(dates, func(i, j int) bool {
-			return messages[dates[i]] > messages[dates[j]]
-		})
-
-		results := make([]string, 0)
-		for index := 0; index < len(dates) && index < 3; index++ {
-			data, err := r.storage.Get(ratepath + ".data" + dates[index])
-			if err == nil {
-				results = append(results, string(data))
-			}
+		rate, err := r.storage.GetMessageTop(message.GetPeerId(), fromId)
+		if err != nil {
+			r.logger.Error("cannot get messages top: " + err.Error())
 		}
+
+		top := getTop(5, rate)
 
 		response := ""
-		for k, v := range results {
+		for k, v := range top {
 			if k > 0 {
 				response += "\r\n\r\n"
 			}
@@ -94,29 +81,18 @@ func (r *messageRater) returnMessageTop(message alina.PrivateMessage) {
 
 //rate one forwarded message
 func (r *messageRater) rateMessage(message alina.PrivateMessage) {
-
 	fwd := message.GetFwdMessages()
 	if fwd != nil && len(fwd) == 1 {
-
-		path := strconv.Itoa(message.GetPeerId()) + ".rates." + strconv.Itoa(fwd[0].GetFromID())
-		ratepath := path + ".rate" + strconv.Itoa(fwd[0].GetDate())
-		datapath := path + ".data" + strconv.Itoa(fwd[0].GetDate())
-
-		rate := 1
-		val, err := r.storage.Get(ratepath)
-		if err == nil {
-			oldrate, err := strconv.Atoi(string(val))
-			if err == nil {
-				rate += oldrate
-			}
+		err := r.storage.IncrementMessageRate(message.GetPeerId(), fwd[0].GetFromID(), fwd[0].GetDate(), fwd[0].GetText())
+		if err != nil {
+			r.logger.Error(err)
 		}
-		r.storage.Update(ratepath, strconv.Itoa(rate))
-		r.storage.Update(datapath, fwd[0].GetText())
 	}
 }
 
 func (r *messageRater) Jsonize() (*string, error) {
-	panic("implement me")
+	result := "{}"
+	return &result, nil
 }
 
 func (r *messageRater) Meet(message alina.PrivateMessage) bool {
@@ -131,9 +107,31 @@ func (r *messageRater) Meet(message alina.PrivateMessage) bool {
 }
 
 func (r *messageRater) Order() int {
-	panic("implement me")
+	return 10
 }
 
 func (r *messageRater) RateMessage() {
 
+}
+
+func getTop(i int, rate map[string]int) []string {
+	top := make([]string, 0)
+	temp := make(map[string]struct{})
+
+	for len(top) < i || len(top) < len(rate) {
+		tr := -1
+		tt := ""
+		for text, rate := range rate {
+			if _, ok := temp[text]; !ok && rate > tr {
+				tr = rate
+				tt = text
+			}
+		}
+		if tr == -1 {
+			return top
+		}
+		top = append(top, tt)
+		temp[tt] = struct{}{}
+	}
+	return top
 }

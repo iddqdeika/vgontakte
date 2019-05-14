@@ -4,20 +4,25 @@ import (
 	"alina/alina"
 	"sort"
 	"sync"
+	"vgontakte/config"
 	"vgontakte/vgontakte"
 )
 
-func NewPrivateMessageDispatcher() vgontakte.PrivateMessageDispatcher {
-	return &privateMessageDispatcher{}
+func NewPrivateMessageDispatcher(storage vgontakte.Storage) vgontakte.PrivateMessageDispatcher {
+	return &privateMessageDispatcher{storage: storage}
 }
 
 type privateMessageDispatcher struct {
+	storage  vgontakte.Storage
 	m        sync.RWMutex
 	handlers []vgontakte.MessageHandler
 }
 
 func (d *privateMessageDispatcher) DispatchMessage(message alina.PrivateMessage, e error) {
 	go func() {
+		if !d.filterMessage(message.GetPeerId()) {
+			return
+		}
 		handlers := d.SafelyGetHandlers()
 		for _, handler := range handlers {
 			if handler.Meet(message) {
@@ -43,4 +48,12 @@ func (d *privateMessageDispatcher) SafelyAddHandler(handler vgontakte.MessageHan
 	defer d.m.Unlock()
 	d.handlers = append(d.handlers, handler)
 	sort.Sort(MessageHandlersSorter(d.handlers))
+}
+
+func (d *privateMessageDispatcher) filterMessage(peerId int) bool {
+	owner, err := config.GetCommandLineArgsConfig().GetInt("ownerpeer")
+	if err == nil && owner == peerId {
+		return true
+	}
+	return d.storage.CheckPeerRegistration(peerId)
 }

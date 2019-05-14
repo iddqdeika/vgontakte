@@ -21,6 +21,10 @@ type vbot struct {
 	messageDispatcher vgontakte.PrivateMessageDispatcher
 }
 
+func (b *vbot) GetLogger() vgontakte.Logger {
+	return b.logger
+}
+
 func (b *vbot) GetStrorage() vgontakte.Storage {
 	return b.storage
 }
@@ -48,7 +52,7 @@ func (b *vbot) Init(alina alina.Alina, storage vgontakte.Storage, logger vgontak
 	}
 	b.logger = logger
 
-	b.messageDispatcher = dispatcher.NewPrivateMessageDispatcher()
+	b.messageDispatcher = dispatcher.NewPrivateMessageDispatcher(b.storage)
 
 	mh := b.initializeMessageHandlers()
 	for _, h := range mh {
@@ -68,7 +72,8 @@ func (b *vbot) initializeMessageHandlers() []vgontakte.MessageHandler {
 
 	creater, err := handlers.GetHandlerCreator(vgontakte.RateMessageHandler)
 	if err != nil {
-		panic(err)
+		b.logger.Error(err)
+		return result
 	}
 	var i int
 	params := map[string]interface{}{

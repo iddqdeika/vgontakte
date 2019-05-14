@@ -5,11 +5,7 @@ import (
 	"vgontakte/vgontakte"
 )
 
-var Logger vgontakte.Logger
-
-func Init() {
-	Logger = &logger{}
-}
+var Logger vgontakte.Logger = &logger{}
 
 type logger struct {
 }

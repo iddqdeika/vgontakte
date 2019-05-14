@@ -3,6 +3,6 @@ package vgontakte
 type HandlerType string
 
 const (
-	EchoMessageHandler HandlerType = "echo_message"
-	RateMessageHandler HandlerType = "rate_message"
+	PeerRegisterHandler HandlerType = "peer_register"
+	RateMessageHandler  HandlerType = "rate_message"
 )

@@ -9,6 +9,7 @@ type Bot interface {
 	Run()
 	GetPrivateMessageDispatcher() (PrivateMessageDispatcher, error)
 	GetStrorage() Storage
+	GetLogger() Logger
 }
 
 type Logger interface {
@@ -16,9 +17,16 @@ type Logger interface {
 	Error(args ...interface{})
 }
 
+type Config interface {
+	GetInt(name string) (int, error)
+	GetString(name string) (string, error)
+}
+
 type Storage interface {
-	IncrementMessageRate(peerId int, fromId int, fwdDate int) error
+	IncrementMessageRate(peerId int, fromId int, fwdDate int, messageText string) error
 	GetMessageTop(peerId int, fromId int) (map[string]int, error)
+	RegisterPeer(peerId int) error
+	CheckPeerRegistration(peerId int) bool
 }
 
 type MessageHandler interface {

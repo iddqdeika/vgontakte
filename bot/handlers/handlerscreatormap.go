@@ -6,8 +6,8 @@ import (
 )
 
 var handlersMap = map[vgontakte.HandlerType]vgontakte.HandlerCreator{
-	vgontakte.EchoMessageHandler: &echoHandlerCreator{},
-	vgontakte.RateMessageHandler: &messageRaterCreator{},
+	vgontakte.RateMessageHandler:  &messageRaterCreator{},
+	vgontakte.PeerRegisterHandler: &peerRegistratorCreator{},
 }
 
 func GetHandlerCreator(t vgontakte.HandlerType) (vgontakte.HandlerCreator, error) {

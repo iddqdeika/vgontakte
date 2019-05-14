@@ -1,11 +1,18 @@
 package localstorage
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/boltdb/bolt"
+	"strconv"
 	"strings"
 	"time"
 	"vgontakte/vgontakte"
+)
+
+const (
+	messageRatePath      = "message_rates"
+	peerRegistrationPath = "registered_peers"
 )
 
 func GetLocalStorage(dbFileName string) vgontakte.Storage {
@@ -18,6 +25,70 @@ type boltStorage struct {
 	fileName string
 	db       *bolt.DB
 	//buckets		map[string]struct{}
+}
+
+func (s *boltStorage) CheckPeerRegistration(peerId int) bool {
+	data, err := s.Get(peerRegistrationPath + "." + strconv.Itoa(peerId))
+	if err != nil {
+		return false
+	}
+	return string(data) == "1"
+}
+
+func (s *boltStorage) RegisterPeer(peerId int) error {
+	return s.Update(peerRegistrationPath+"."+strconv.Itoa(peerId), "1")
+}
+
+func (s *boltStorage) IncrementMessageRate(peerId int, fromId int, fwdDate int, messageText string) error {
+
+	rates, err := s.getPeerMessageRate(peerId)
+	if err != nil {
+		return err
+	}
+	rates.incrementRate(fromId, fwdDate, messageText)
+
+	data, err := json.Marshal(rates)
+	if err != nil {
+		return fmt.Errorf("cannot marshal new versa of rates to json: %v", err)
+	}
+
+	err = s.Update(messageRatePath+"."+strconv.Itoa(peerId), string(data))
+
+	if err != nil {
+		return fmt.Errorf("cannot update rates in boltdb: %v", err)
+	}
+	return nil
+}
+
+func (s *boltStorage) getPeerMessageRate(peerId int) (*peerMessageRates, error) {
+	s.db.Update(func(tx *bolt.Tx) error {
+		_, err := ensureBucket(messageRatePath, tx)
+		return err
+	})
+	data, err := s.Get(messageRatePath + "." + strconv.Itoa(peerId))
+	if err != nil {
+		return nil, fmt.Errorf("cannot get alter version of rates: %v", err)
+	}
+	rates := &peerMessageRates{}
+	err = json.Unmarshal(data, rates)
+	if err != nil {
+		*rates = getNewPeerMessageRates(peerId)
+	}
+	return rates, nil
+}
+
+func (s *boltStorage) GetMessageTop(peerId int, fromId int) (map[string]int, error) {
+	rate, err := s.getPeerMessageRate(peerId)
+	if err != nil {
+		return nil, fmt.Errorf("cannot retrieve rate from boltdb: %v", err)
+	}
+
+	urate := rate.getUserRate(fromId)
+	result := make(map[string]int)
+	for _, v := range urate.Messages {
+		result[v.Text] = v.Rate
+	}
+	return result, nil
 }
 
 func (s *boltStorage) Iterate(fromPath string, rule func(k, v []byte) error) error {
