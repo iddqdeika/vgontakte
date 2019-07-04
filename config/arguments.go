@@ -30,6 +30,7 @@ type claconfig struct {
 }
 
 func (c *claconfig) GetInt(name string) (int, error) {
+	c.ensureArgs()
 	if val, ok := c.args[name]; ok {
 		res, err := strconv.Atoi(val)
 		if err != nil {

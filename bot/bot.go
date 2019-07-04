@@ -70,10 +70,27 @@ func (b *vbot) Run() {
 func (b *vbot) initializeMessageHandlers() []vgontakte.MessageHandler {
 	result := make([]vgontakte.MessageHandler, 0)
 
-	creater, err := handlers.GetHandlerCreator(vgontakte.RateMessageHandler)
+	handler, err := b.getHandlerBuCreatorName(vgontakte.RateMessageHandler)
 	if err != nil {
 		b.logger.Error(err)
-		return result
+	} else {
+		result = append(result, handler)
+	}
+
+	handler, err = b.getHandlerBuCreatorName(vgontakte.PeerRegisterHandler)
+	if err != nil {
+		b.logger.Error(err)
+	} else {
+		result = append(result, handler)
+	}
+
+	return result
+}
+
+func (b *vbot) getHandlerBuCreatorName(creator vgontakte.HandlerType) (vgontakte.MessageHandler, error) {
+	creater, err := handlers.GetHandlerCreator(creator)
+	if err != nil {
+		return nil, err
 	}
 	var i int
 	params := map[string]interface{}{
@@ -83,7 +100,5 @@ func (b *vbot) initializeMessageHandlers() []vgontakte.MessageHandler {
 	if err != nil {
 		panic(err)
 	}
-	result = append(result, handler)
-
-	return result
+	return handler, nil
 }

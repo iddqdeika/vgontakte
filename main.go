@@ -22,7 +22,10 @@ func main() {
 	alina := initAlina()
 	vkbot := bot.NewBot()
 
-	vkbot.Init(alina, storage, defaultlogger.Logger)
+	err := vkbot.Init(alina, storage, defaultlogger.Logger)
+	if err != nil {
+		panic(err)
+	}
 
 	vkbot.Run()
 

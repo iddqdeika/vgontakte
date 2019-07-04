@@ -20,17 +20,21 @@ type privateMessageDispatcher struct {
 
 func (d *privateMessageDispatcher) DispatchMessage(message alina.PrivateMessage, e error) {
 	go func() {
-		if !d.filterMessage(message.GetPeerId()) {
+		d.dispatchMessage(message, e)
+	}()
+}
+
+func (d *privateMessageDispatcher) dispatchMessage(message alina.PrivateMessage, e error) {
+	if !d.filterMessage(message.GetPeerId()) {
+		return
+	}
+	handlers := d.SafelyGetHandlers()
+	for _, handler := range handlers {
+		if handler.Meet(message) {
+			handler.Handle(message, e)
 			return
 		}
-		handlers := d.SafelyGetHandlers()
-		for _, handler := range handlers {
-			if handler.Meet(message) {
-				handler.Handle(message, e)
-				return
-			}
-		}
-	}()
+	}
 }
 
 func (d *privateMessageDispatcher) SafelyGetHandlers() []vgontakte.MessageHandler {

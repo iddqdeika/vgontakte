@@ -51,10 +51,24 @@ func (r *messageRater) Handle(message alina.PrivateMessage, err error) {
 func (r *messageRater) returnMessageTop(message alina.PrivateMessage) {
 
 	text := message.GetText()
-	if (strings.Contains(text, "|@")) && strings.Contains(text, "[id") {
-		id := string([]rune(message.GetText())[:strings.Index(message.GetText(), "|@")])
-		id = string([]rune(id)[strings.Index(id, "[id")+3:])
-
+	if (strings.Contains(text, "|@") || strings.Contains(text, "|")) && (strings.Contains(text, "[id") || strings.Contains(text, "[club")) {
+		var postfix string
+		var prefix string
+		if strings.Contains(text, "|@") {
+			postfix = "|@"
+		} else {
+			postfix = "|"
+		}
+		if strings.Contains(text, "[id") {
+			prefix = "[id"
+		} else {
+			prefix = "[club"
+		}
+		id := string([]rune(message.GetText())[:strings.Index(message.GetText(), postfix)])
+		id = string([]rune(id)[strings.Index(id, prefix)+len(prefix):])
+		if prefix == "[club" {
+			id = "-" + id
+		}
 		fromId, err := strconv.Atoi(id)
 		if err != nil {
 			r.logger.Error("cannot convert fromid to int: " + id)
@@ -73,6 +87,9 @@ func (r *messageRater) returnMessageTop(message alina.PrivateMessage) {
 				response += "\r\n\r\n"
 			}
 			response += "топ " + strconv.Itoa(k+1) + ":\r\n\"" + v + "\""
+		}
+		if top == nil || len(top) == 0 {
+			response = "нет топа по этому пользаку"
 		}
 		r.alina.GetMessagesApi().SendSimpleMessage(strconv.Itoa(message.GetPeerId()), response)
 
