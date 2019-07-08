@@ -1,5 +1,7 @@
 package localstorage
 
+import "strconv"
+
 func getNewPeerMessageRates(peerId int) peerMessageRates {
 	res := peerMessageRates{}
 	res.PeerId = peerId
@@ -27,8 +29,8 @@ func (p *peerMessageRates) getUserRate(fromId int) *userMessageRates {
 	return p.Users[fromId]
 }
 
-func (p *peerMessageRates) incrementRate(fromId int, date int, text string) {
-	p.getUserRate(fromId).getMessage(date, text).Rate++
+func (p *peerMessageRates) incrementRate(fromId int, date int, text string, attachments string) {
+	p.getUserRate(fromId).getMessage(date, text, attachments).Rate++
 
 }
 
@@ -37,15 +39,27 @@ type userMessageRates struct {
 	Messages map[int]*message `json:"messages"`
 }
 
-func (u *userMessageRates) getMessage(date int, text string) *message {
+func (u *userMessageRates) getMessage(date int, text string, attachments string) *message {
 	if val, ok := u.Messages[date]; ok {
 		return val
 	}
-	u.Messages[date] = &message{Text: text}
+	u.Messages[date] = &message{Text: text, Date: date, Attachments: attachments}
 	return u.Messages[date]
 }
 
 type message struct {
-	Text string `json:"text"`
-	Rate int    `json:"rate"`
+	Text        string `json:"text"`
+	Date        int    `json:"date"`
+	Rate        int    `json:"rate"`
+	Attachments string `json:"attachments"`
+}
+
+func (m *message) GetText() string {
+	return m.Text
+}
+func (m *message) GetAttachmentTokensList() string {
+	return m.Attachments
+}
+func (m *message) GetDate() string {
+	return strconv.Itoa(m.Date)
 }

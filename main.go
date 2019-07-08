@@ -3,7 +3,6 @@ package main
 import (
 	"alina/alina"
 	"alina/alinafactory"
-	"alina/logger"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -47,8 +46,7 @@ func initAlina() alina.Alina {
 		panic(err)
 	}
 
-	logger.InitDefaultLogger()
-	logger := logger.DefaultLogger
+	logger := defaultlogger.Logger
 	al, err := alinafactory.New(cfg.AccessToken, "5.85", cfg.GroupId, logger, cfg.LongPollInt)
 	if err != nil {
 		logger.Error(fmt.Sprintf("fatal error during Alina initialization: ", err))

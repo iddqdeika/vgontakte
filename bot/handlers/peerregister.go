@@ -42,11 +42,14 @@ func (r *peerRegistrator) Order() int {
 
 func (r *peerRegistrator) Meet(message alina.PrivateMessage) bool {
 	owner, err := config.GetCommandLineArgsConfig().GetInt("ownerpeer")
-	return strings.Index(message.GetText(), "register ") == 0 && err == nil && owner == message.GetPeerId()
+	return strings.Index(message.GetText(), "register ") == 0 && err == nil && (owner == message.GetPeerId() || owner == message.GetFromId())
 }
 
 func (r *peerRegistrator) Handle(message alina.PrivateMessage, err error) {
 	temp := strings.Split(message.GetText(), " ")[1]
+	if temp == "this" {
+		r.storage.RegisterPeer(message.GetPeerId())
+	}
 	newPeer, err := strconv.Atoi(temp)
 	if err != nil {
 		r.logger.Info("cant parse peer " + temp)

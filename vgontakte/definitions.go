@@ -23,8 +23,8 @@ type Config interface {
 }
 
 type Storage interface {
-	IncrementMessageRate(peerId int, fromId int, fwdDate int, messageText string) error
-	GetMessageTop(peerId int, fromId int) (map[string]int, error)
+	IncrementMessageRate(peerId int, fromId int, fwdDate int, messageText string, mediaAttachmentTokens []string) error
+	GetMessageTop(peerId int, fromId int) (map[RaterMessage]int, error)
 	RegisterPeer(peerId int) error
 	CheckPeerRegistration(peerId int) bool
 }
@@ -45,4 +45,10 @@ type PrivateMessageDispatcher interface {
 	DispatchMessage(message alina.PrivateMessage, e error)
 	SafelyGetHandlers() []MessageHandler
 	SafelyAddHandler(handler MessageHandler)
+}
+
+type RaterMessage interface {
+	GetText() string
+	GetAttachmentTokensList() string
+	GetDate() string
 }

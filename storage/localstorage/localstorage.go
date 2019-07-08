@@ -39,13 +39,21 @@ func (s *boltStorage) RegisterPeer(peerId int) error {
 	return s.Update(peerRegistrationPath+"."+strconv.Itoa(peerId), "1")
 }
 
-func (s *boltStorage) IncrementMessageRate(peerId int, fromId int, fwdDate int, messageText string) error {
+func (s *boltStorage) IncrementMessageRate(peerId int, fromId int, fwdDate int, messageText string, mediaAttachmentTokens []string) error {
+
+	var attachments string
+	for _, v := range mediaAttachmentTokens {
+		if len(attachments) > 0 {
+			attachments += ","
+		}
+		attachments += v
+	}
 
 	rates, err := s.getPeerMessageRate(peerId)
 	if err != nil {
 		return err
 	}
-	rates.incrementRate(fromId, fwdDate, messageText)
+	rates.incrementRate(fromId, fwdDate, messageText, attachments)
 
 	data, err := json.Marshal(rates)
 	if err != nil {
@@ -77,16 +85,16 @@ func (s *boltStorage) getPeerMessageRate(peerId int) (*peerMessageRates, error) 
 	return rates, nil
 }
 
-func (s *boltStorage) GetMessageTop(peerId int, fromId int) (map[string]int, error) {
+func (s *boltStorage) GetMessageTop(peerId int, fromId int) (map[vgontakte.RaterMessage]int, error) {
 	rate, err := s.getPeerMessageRate(peerId)
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve rate from boltdb: %v", err)
 	}
 
 	urate := rate.getUserRate(fromId)
-	result := make(map[string]int)
+	result := make(map[vgontakte.RaterMessage]int)
 	for _, v := range urate.Messages {
-		result[v.Text] = v.Rate
+		result[v] = v.Rate
 	}
 	return result, nil
 }

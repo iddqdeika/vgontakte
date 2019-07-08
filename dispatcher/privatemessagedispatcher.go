@@ -25,7 +25,7 @@ func (d *privateMessageDispatcher) DispatchMessage(message alina.PrivateMessage,
 }
 
 func (d *privateMessageDispatcher) dispatchMessage(message alina.PrivateMessage, e error) {
-	if !d.filterMessage(message.GetPeerId()) {
+	if !d.filterMessage(message.GetPeerId(), message.GetFromId()) || message == nil {
 		return
 	}
 	handlers := d.SafelyGetHandlers()
@@ -54,9 +54,9 @@ func (d *privateMessageDispatcher) SafelyAddHandler(handler vgontakte.MessageHan
 	sort.Sort(MessageHandlersSorter(d.handlers))
 }
 
-func (d *privateMessageDispatcher) filterMessage(peerId int) bool {
+func (d *privateMessageDispatcher) filterMessage(peerId int, fromId int) bool {
 	owner, err := config.GetCommandLineArgsConfig().GetInt("ownerpeer")
-	if err == nil && owner == peerId {
+	if err == nil && (owner == peerId || fromId == owner) {
 		return true
 	}
 	return d.storage.CheckPeerRegistration(peerId)

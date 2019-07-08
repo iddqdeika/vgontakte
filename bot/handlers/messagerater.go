@@ -64,8 +64,13 @@ func (r *messageRater) returnMessageTop(message alina.PrivateMessage) {
 		} else {
 			prefix = "[club"
 		}
-		id := string([]rune(message.GetText())[:strings.Index(message.GetText(), postfix)])
-		id = string([]rune(id)[strings.Index(id, prefix)+len(prefix):])
+		runes := []byte(message.GetText())
+		index := strings.Index(message.GetText(), postfix)
+		if runes != nil && index > 1 {
+
+		}
+		id := string([]byte(message.GetText())[:strings.Index(message.GetText(), postfix)])
+		id = string([]byte(id)[strings.Index(id, prefix)+len(prefix):])
 		if prefix == "[club" {
 			id = "-" + id
 		}
@@ -81,18 +86,14 @@ func (r *messageRater) returnMessageTop(message alina.PrivateMessage) {
 
 		top := getTop(5, rate)
 
-		response := ""
-		for k, v := range top {
-			if k > 0 {
-				response += "\r\n\r\n"
-			}
-			response += "топ " + strconv.Itoa(k+1) + ":\r\n\"" + v + "\""
-		}
 		if top == nil || len(top) == 0 {
-			response = "нет топа по этому пользаку"
+			r.alina.GetMessagesApi().SendSimpleMessage(strconv.Itoa(message.GetPeerId()), "нет топа по пользователю")
+		} else {
+			for k, v := range top {
+				response := "топ " + strconv.Itoa(k+1) + ":\r\nтекст\"" + v.GetText() + "\""
+				r.alina.GetMessagesApi().SendMessageWithAttachment(strconv.Itoa(message.GetPeerId()), response, v.GetAttachmentTokensList())
+			}
 		}
-		r.alina.GetMessagesApi().SendSimpleMessage(strconv.Itoa(message.GetPeerId()), response)
-
 	}
 }
 
@@ -100,7 +101,18 @@ func (r *messageRater) returnMessageTop(message alina.PrivateMessage) {
 func (r *messageRater) rateMessage(message alina.PrivateMessage) {
 	fwd := message.GetFwdMessages()
 	if fwd != nil && len(fwd) == 1 {
-		err := r.storage.IncrementMessageRate(message.GetPeerId(), fwd[0].GetFromID(), fwd[0].GetDate(), fwd[0].GetText())
+		tokens := make([]string, 0)
+		for _, v := range fwd[0].GetAttachments() {
+			if v.IsMedia() {
+				token, err := v.GetPrivateMessageToken()
+				if err != nil {
+					r.logger.Info(err)
+				} else {
+					tokens = append(tokens, token)
+				}
+			}
+		}
+		err := r.storage.IncrementMessageRate(message.GetPeerId(), fwd[0].GetFromID(), fwd[0].GetDate(), fwd[0].GetText(), tokens)
 		if err != nil {
 			r.logger.Error(err)
 		}
@@ -131,24 +143,24 @@ func (r *messageRater) RateMessage() {
 
 }
 
-func getTop(i int, rate map[string]int) []string {
-	top := make([]string, 0)
+func getTop(i int, rate map[vgontakte.RaterMessage]int) []vgontakte.RaterMessage {
+	top := make([]vgontakte.RaterMessage, 0)
 	temp := make(map[string]struct{})
 
 	for len(top) < i || len(top) < len(rate) {
 		tr := -1
-		tt := ""
-		for text, rate := range rate {
-			if _, ok := temp[text]; !ok && rate > tr {
+		var tt vgontakte.RaterMessage
+		for msg, rate := range rate {
+			if _, ok := temp[msg.GetDate()]; !ok && rate > tr {
 				tr = rate
-				tt = text
+				tt = msg
 			}
 		}
 		if tr == -1 {
 			return top
 		}
 		top = append(top, tt)
-		temp[tt] = struct{}{}
+		temp[tt.GetDate()] = struct{}{}
 	}
 	return top
 }
